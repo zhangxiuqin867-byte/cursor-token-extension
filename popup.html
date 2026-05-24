@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cursor Token 获取助手</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0f14;
+      --surface: #141720;
+      --border: #1e2330;
+      --border-active: #3b82f6;
+      --text: #e2e8f0;
+      --text-muted: #64748b;
+      --text-dim: #94a3b8;
+      --accent: #3b82f6;
+      --accent-glow: rgba(59,130,246,0.18);
+      --green: #22c55e;
+      --green-glow: rgba(34,197,94,0.15);
+      --red: #ef4444;
+      --red-glow: rgba(239,68,68,0.15);
+      --yellow: #f59e0b;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Noto Sans SC', sans-serif;
+      --radius: 8px;
+      --radius-sm: 5px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { font-size: 14px; }
+
+    body {
+      width: 380px;
+      min-height: 480px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    /* 顶部 header */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 18px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .header-icon {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+      box-shadow: 0 0 12px rgba(59,130,246,0.3);
+    }
+
+    .header-text h1 {
+      font-size: 14px;
+      font-weight: 700;
+      font-family: var(--sans);
+      letter-spacing: 0.02em;
+      color: var(--text);
+    }
+
+    .header-text p {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    /* 主体内容 */
+    .main { padding: 16px; }
+
+    /* 状态提示区 */
+    .status-area {
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      min-height: 56px;
+      transition: all 0.25s ease;
+      background: var(--surface);
+    }
+
+    .status-area.idle {
+      border-color: var(--border);
+    }
+
+    .status-area.loading {
+      border-color: var(--accent);
+      background: linear-gradient(135deg, var(--surface), rgba(59,130,246,0.05));
+    }
+
+    .status-area.success {
+      border-color: var(--green);
+      background: linear-gradient(135deg, var(--surface), var(--green-glow));
+    }
+
+    .status-area.error {
+      border-color: var(--red);
+      background: linear-gradient(135deg, var(--surface), var(--red-glow));
+    }
+
+    .status-icon {
+      font-size: 18px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .status-text {
+      flex: 1;
+    }
+
+    .status-title {
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .status-detail {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 3px;
+      line-height: 1.5;
+    }
+
+    /* 主按钮 */
+    .btn-primary {
+      width: 100%;
+      padding: 11px 16px;
+      background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 13.5px;
+      font-weight: 600;
+      font-family: var(--sans);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      letter-spacing: 0.02em;
+      box-shadow: 0 2px 12px rgba(59,130,246,0.25);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, #2563eb, #60a5fa);
+      box-shadow: 0 4px 18px rgba(59,130,246,0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:focus-visible {
+      outline: 3px solid #60a5fa;
+      outline-offset: 2px;
+    }
+
+    .btn-primary:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Token 结果卡片 */
+    .token-section {
+      margin-top: 14px;
+      display: none;
+    }
+
+    .token-section.visible { display: block; }
+
+    .token-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .token-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .token-label-text {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .btn-copy {
+      background: rgba(59,130,246,0.12);
+      color: var(--accent);
+      border: 1px solid rgba(59,130,246,0.25);
+      border-radius: 4px;
+      padding: 3px 9px;
+      font-size: 11px;
+      font-family: var(--sans);
+      cursor: pointer;
+      transition: all 0.15s;
+      font-weight: 500;
+    }
+
+    .btn-copy:hover {
+      background: rgba(59,130,246,0.22);
+      border-color: var(--accent);
+    }
+
+    .btn-copy:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .btn-copy.copied {
+      background: rgba(34,197,94,0.12);
+      color: var(--green);
+      border-color: rgba(34,197,94,0.3);
+    }
+
+    .token-value {
+      padding: 10px 12px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      word-break: break-all;
+      line-height: 1.6;
+      max-height: 72px;
+      overflow-y: auto;
+      user-select: all;
+    }
+
+    /* 账号信息 */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .info-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 9px 11px;
+    }
+
+    .info-item-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 600;
+    }
+
+    .info-item-value {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      margin-top: 3px;
+      font-family: var(--mono);
+    }
+
+    .info-item-value.highlight {
+      color: var(--green);
+    }
+
+    /* 分割线 */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 14px 0;
+    }
+
+    /* 底部提示 */
+    .footer-tip {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      padding: 10px 0 4px;
+      line-height: 1.6;
+    }
+
+    .footer-tip a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .footer-tip a:hover {
+      text-decoration: underline;
+    }
+
+    /* 旋转动画 */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .spin { display: inline-block; animation: spin 0.9s linear infinite; }
+
+    /* 登录提示按钮 */
+    .btn-secondary {
+      width: 100%;
+      padding: 9px 16px;
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid rgba(59,130,246,0.35);
+      border-radius: var(--radius);
+      font-size: 12.5px;
+      font-family: var(--sans);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      margin-top: 8px;
+    }
+
+    .btn-secondary:hover {
+      background: var(--accent-glow);
+      border-color: var(--accent);
+    }
+
+    .btn-secondary:focus-visible {
+      outline: 3px solid #60a5fa;
+      outline-offset: 2px;
+    }
+
+    /* live region for screen readers */
+    .sr-live {
+      position: absolute;
+      width: 1px; height: 1px;
+      overflow: hidden;
+      clip: rect(0,0,0,0);
+      white-space: nowrap;
+    }
+
+    /* 滚动条 */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+  <!-- 屏幕阅读器实时公告区 -->
+  <div
+    id="sr-announce"
+    class="sr-live"
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
+  ></div>
+
+  <!-- Header -->
+  <header class="header" role="banner">
+    <div class="header-icon" aria-hidden="true">🔑</div>
+    <div class="header-text">
+      <h1>Cursor Token 助手</h1>
+      <p>一键获取 Access Token</p>
+    </div>
+  </header>
+
+  <main class="main" role="main">
+
+    <!-- 状态区 -->
+    <section
+      id="status-area"
+      class="status-area idle"
+      role="region"
+      aria-label="当前状态"
+      aria-live="polite"
+    >
+      <span class="status-icon" aria-hidden="true" id="status-icon">💡</span>
+      <div class="status-text">
+        <div class="status-title" id="status-title">准备就绪</div>
+        <div class="status-detail" id="status-detail">请先确保已在 cursor.com 登录账号，然后点击下方按钮获取 Token。</div>
+      </div>
+    </section>
+
+    <!-- 主操作按钮 -->
+    <button
+      id="btn-get"
+      class="btn-primary"
+      aria-describedby="status-detail"
+    >
+      <span id="btn-icon" aria-hidden="true">🚀</span>
+      <span id="btn-label">一键获取 Access Token</span>
+    </button>
+
+    <!-- 打开 cursor.com 的辅助按钮（初始隐藏，未登录时显示） -->
+    <button
+      id="btn-open-cursor"
+      class="btn-secondary"
+      style="display:none"
+      aria-label="在新标签页打开 cursor.com 登录页面"
+    >
+      <span aria-hidden="true">🌐</span>
+      前往 cursor.com 登录
+    </button>
+
+    <!-- Token 结果区域 -->
+    <section
+      id="token-section"
+      class="token-section"
+      role="region"
+      aria-label="获取到的 Token 信息"
+    >
+      <hr class="divider" role="separator">
+
+      <!-- Access Token -->
+      <div class="token-card">
+        <div class="token-label">
+          <span class="token-label-text">Access Token</span>
+          <button
+            class="btn-copy"
+            id="copy-access"
+            aria-label="复制 Access Token 到剪贴板"
+          >复制</button>
+        </div>
+        <div
+          class="token-value"
+          id="val-access"
+          aria-label="Access Token 值"
+          tabindex="0"
+        ></div>
+      </div>
+
+      <!-- Session Token（完整原始值） -->
+      <div class="token-card">
+        <div class="token-label">
+          <span class="token-label-text">Session Token（完整）</span>
+          <button
+            class="btn-copy"
+            id="copy-session"
+            aria-label="复制完整 Session Token 到剪贴板"
+          >复制</button>
+        </div>
+        <div
+          class="token-value"
+          id="val-session"
+          aria-label="完整 Session Token 值"
+          tabindex="0"
+        ></div>
+      </div>
+
+      <!-- 账号信息 -->
+      <div class="info-grid" role="list" aria-label="账号详细信息">
+        <div class="info-item" role="listitem">
+          <div class="info-item-label">剩余天数</div>
+          <div class="info-item-value highlight" id="val-days">—</div>
+        </div>
+        <div class="info-item" role="listitem">
+          <div class="info-item-label">过期时间</div>
+          <div class="info-item-value" id="val-expire" style="font-size:10px">—</div>
+        </div>
+        <div class="info-item" role="listitem" style="grid-column: span 2">
+          <div class="info-item-label">用户 ID</div>
+          <div class="info-item-value" id="val-userid" style="font-size:10px;word-break:break-all">—</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer role="contentinfo">
+    <p class="footer-tip">
+      Token 仅在本地处理，不会上传至任何第三方。<br>
+      遇到问题？请先<a href="https://cursor.com" id="link-cursor" target="_blank">登录 cursor.com</a>
+    </p>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>
